@@ -19,30 +19,6 @@ jobs:
         with:
           submodules: true
           lfs: false
-
-      # Clean npm cache to avoid potential issues with corrupted tarballs
-      - name: Clean npm cache
-        run: npm cache clean --force
-
-      # Generate tarball
-      - name: Generate tarball
-        run: npm pack
-
-      # Verify the integrity of the tarball file
-      - name: Verify tarball integrity
-        run: |
-          if [ -f "rt-client-0.4.6.tgz" ]; then
-            tar -tzf rt-client-0.4.6.tgz
-          else
-            echo "Tarball not found, please check the path or regenerate the tarball."
-            exit 1
-          fi
-
-      # Install npm dependencies
-      - name: Install dependencies
-        run: npm install
-
-      # Build and Deploy
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
