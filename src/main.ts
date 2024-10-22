@@ -7,19 +7,15 @@ let realtimeStreaming: LowLevelRTClient;
 let audioRecorder: Recorder;
 let audioPlayer: Player;
 
-async function start_realtime(endpoint: string, apiKey: string, deploymentOrModel: string) {
-  if (isAzureOpenAI()) {
-    realtimeStreaming = new LowLevelRTClient(new URL(endpoint), { key: apiKey }, { deployment: deploymentOrModel });
-  } else {
-    realtimeStreaming = new LowLevelRTClient({ key: apiKey }, { model: deploymentOrModel });
-  }
+async function start_realtime(apiKey: string, model: string) {
+  realtimeStreaming = new LowLevelRTClient({ key: apiKey }, { model: model });
 
   try {
     console.log("sending session config");
     await realtimeStreaming.send(createConfigMessage());
   } catch (error) {
     console.log(error);
-    makeNewTextBlock("[Connection error]: Unable to send initial config message. Please check your endpoint and authentication details.");
+    makeNewTextBlock("[连接错误]: 无法发送初始配置消息。请检查您的认证详情。");
     setFormInputState(InputState.ReadyToStart);
     return;
   }
@@ -163,10 +159,6 @@ const formStartButton =
   document.querySelector<HTMLButtonElement>("#start-recording")!;
 const formStopButton =
   document.querySelector<HTMLButtonElement>("#stop-recording")!;
-const formEndpointField =
-  document.querySelector<HTMLInputElement>("#endpoint")!;
-const formAzureToggle =
-  document.querySelector<HTMLInputElement>("#azure-toggle")!;
 const formApiKeyField = document.querySelector<HTMLInputElement>("#api-key")!;
 const formDeploymentOrModelField = document.querySelector<HTMLInputElement>("#deployment-or-model")!;
 const formSessionInstructionsField =
@@ -182,23 +174,12 @@ enum InputState {
   ReadyToStop,
 }
 
-function isAzureOpenAI(): boolean {
-  return formAzureToggle.checked;
-}
-
-function guessIfIsAzureOpenAI() {
-  const endpoint = (formEndpointField.value || "").trim();
-  formAzureToggle.checked = endpoint.indexOf('azure') > -1;
-}
-
 function setFormInputState(state: InputState) {
-  formEndpointField.disabled = state != InputState.ReadyToStart;
   formApiKeyField.disabled = state != InputState.ReadyToStart;
   formDeploymentOrModelField.disabled = state != InputState.ReadyToStart;
   formStartButton.disabled = state != InputState.ReadyToStart;
   formStopButton.disabled = state != InputState.ReadyToStop;
   formSessionInstructionsField.disabled = state != InputState.ReadyToStart;
-  formAzureToggle.disabled = state != InputState.ReadyToStart;
 }
 
 function getSystemMessage(): string {
@@ -230,27 +211,21 @@ function appendToTextBlock(text: string) {
 formStartButton.addEventListener("click", async () => {
   setFormInputState(InputState.Working);
 
-  const endpoint = formEndpointField.value.trim();
   const key = formApiKeyField.value.trim();
-  const deploymentOrModel = formDeploymentOrModelField.value.trim();
+  const model = formDeploymentOrModelField.value.trim();
 
-  if (isAzureOpenAI() && !endpoint && !deploymentOrModel) {
-    alert("Endpoint and Deployment are required for Azure OpenAI");
-    return;
-  }
-
-  if (!isAzureOpenAI() && !deploymentOrModel) {
-    alert("Model is required for OpenAI");
+  if (!model) {
+    alert("模型名称是必填的");
     return;
   }
 
   if (!key) {
-    alert("API Key is required");
+    alert("API Key 是必填的");
     return;
   }
 
   try {
-    start_realtime(endpoint, key, deploymentOrModel);
+    start_realtime(key, model);
   } catch (error) {
     console.log(error);
     setFormInputState(InputState.ReadyToStart);
@@ -263,8 +238,3 @@ formStopButton.addEventListener("click", async () => {
   realtimeStreaming.close();
   setFormInputState(InputState.ReadyToStart);
 });
-
-formEndpointField.addEventListener('change', async () => {
-  guessIfIsAzureOpenAI();
-});
-guessIfIsAzureOpenAI();
